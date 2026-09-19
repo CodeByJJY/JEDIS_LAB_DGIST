@@ -261,41 +261,101 @@ This formulation appears in methods such as:
 
 # 11. Matrix Norms
 
-Topics:
+A norm measures the magnitude or size of a vector or matrix.
 
-- L1 norm
-- L2 norm
-- Frobenius norm
-- Spectral norm
+## Vector Norms
 
-Examples:
+### L1 Norm
 
-$$
-\|\mathbf{x}\|_2
+The L1 norm is the sum of the absolute values of vector elements.
+
+```math
+\lVert \mathbf{x} \rVert_1
+=
+\sum_i |x_i|
+```
+
+### L2 Norm
+
+The L2 norm, or Euclidean norm, measures the Euclidean length of a vector.
+
+```math
+\lVert \mathbf{x} \rVert_2
 =
 \sqrt{\sum_i x_i^2}
-$$
+```
 
-$$
-\|A\|_F
+## Matrix Norms
+
+### Frobenius Norm
+
+The Frobenius norm is the square root of the sum of the squared elements of a matrix.
+
+```math
+\lVert A \rVert_F
 =
 \sqrt{\sum_{i,j} A_{ij}^2}
-$$
+```
 
-Research relevance:
+### Spectral Norm
+
+The spectral norm of a matrix is its largest singular value.
+
+```math
+\lVert A \rVert_2
+=
+\sigma_{\max}(A)
+```
+
+## Research Relevance
+
+Matrix and vector norms are frequently used to measure:
 
 - Reconstruction error
 - Quantization error
 - Weight perturbation
-- Layer-wise optimization
+- Approximation error
+- Layer-wise output difference
+
+For example, layer-wise reconstruction-based compression methods often minimize an objective of the form:
+
+```math
+\lVert WX - \hat{W}X \rVert_F^2
+```
+
+where:
+
+- $W$ is the original weight matrix
+- $\hat{W}$ is the compressed weight matrix
+- $X$ is the layer input
+
+This type of objective appears in post-training compression methods such as OBC and GPTQ.
 
 ---
 
 # 12. Covariance Matrix
 
-For a random vector $\mathbf{x}$,
+A covariance matrix describes how multiple variables vary together.
 
-$$
+Consider a random vector:
+
+```math
+\mathbf{x}
+=
+[x_1, x_2, \dots, x_d]^T
+```
+
+Its mean vector is:
+
+```math
+\boldsymbol{\mu}
+=
+\mathbb{E}[\mathbf{x}]
+```
+
+The covariance matrix is defined as:
+
+```math
 C
 =
 \mathbb{E}
@@ -303,31 +363,61 @@ C
 (\mathbf{x}-\boldsymbol{\mu})
 (\mathbf{x}-\boldsymbol{\mu})^T
 \right]
-$$
+```
 
-where
+For a $d$-dimensional random vector,
 
-$$
-\boldsymbol{\mu}
+```math
+C \in \mathbb{R}^{d \times d}
+```
+
+and each element $C_{ij}$ represents the covariance between $x_i$ and $x_j$.
+
+```math
+C_{ij}
 =
-\mathbb{E}[\mathbf{x}]
-$$
+\operatorname{Cov}(x_i, x_j)
+```
 
-Topics:
+Therefore, the covariance matrix has the form:
 
-- Mean vector
-- Variance
-- Covariance
-- Covariance matrix
-- Eigenvalue decomposition of covariance
+```math
+C =
+\begin{bmatrix}
+\operatorname{Var}(x_1) & \operatorname{Cov}(x_1,x_2) & \cdots \\
+\operatorname{Cov}(x_2,x_1) & \operatorname{Var}(x_2) & \cdots \\
+\vdots & \vdots & \ddots
+\end{bmatrix}
+```
 
-Research relevance:
+The diagonal elements represent variances:
+
+```math
+C_{ii} = \operatorname{Var}(x_i)
+```
+
+while the off-diagonal elements represent relationships between different variables.
+
+## Key Properties
+
+- A covariance matrix is symmetric.
+- Its diagonal entries are variances.
+- It is positive semi-definite.
+- Its eigenvectors represent principal directions of variation.
+- Its eigenvalues represent the amount of variance along those directions.
+
+## Research Relevance
+
+Covariance matrices are particularly important for:
 
 - Activation statistics
+- Principal Component Analysis (PCA)
 - Variance-Based Pruning
 - Denoised Variance-Based Pruning
-- PCA
+- Second-order optimization
 - Random matrix analysis
+
+In neural network pruning, activation covariance can reveal how neurons vary individually and how their activations are correlated with one another.
 
 ---
 
