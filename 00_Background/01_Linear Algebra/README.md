@@ -342,10 +342,12 @@ Consider a random vector:
 ```math
 \mathbf{x}
 =
-[x_1, x_2, \dots, x_d]^T
+[x_1, x_2, \ldots, x_d]^T
 ```
 
-Its mean vector is:
+where each $x_i$ represents one variable.
+
+The mean vector is:
 
 ```math
 \boldsymbol{\mu}
@@ -365,18 +367,18 @@ C
 \right]
 ```
 
-For a $d$-dimensional random vector,
+For a $d$-dimensional random vector:
 
 ```math
 C \in \mathbb{R}^{d \times d}
 ```
 
-and each element $C_{ij}$ represents the covariance between $x_i$ and $x_j$.
+Each element $C_{ij}$ represents the covariance between variables $x_i$ and $x_j$:
 
 ```math
 C_{ij}
 =
-\operatorname{Cov}(x_i, x_j)
+\mathrm{Cov}(x_i, x_j)
 ```
 
 Therefore, the covariance matrix has the form:
@@ -384,25 +386,77 @@ Therefore, the covariance matrix has the form:
 ```math
 C =
 \begin{bmatrix}
-\operatorname{Var}(x_1) & \operatorname{Cov}(x_1,x_2) & \cdots \\
-\operatorname{Cov}(x_2,x_1) & \operatorname{Var}(x_2) & \cdots \\
-\vdots & \vdots & \ddots
+\mathrm{Var}(x_1) &
+\mathrm{Cov}(x_1,x_2) &
+\cdots &
+\mathrm{Cov}(x_1,x_d)
+\\
+\mathrm{Cov}(x_2,x_1) &
+\mathrm{Var}(x_2) &
+\cdots &
+\mathrm{Cov}(x_2,x_d)
+\\
+\vdots &
+\vdots &
+\ddots &
+\vdots
+\\
+\mathrm{Cov}(x_d,x_1) &
+\mathrm{Cov}(x_d,x_2) &
+\cdots &
+\mathrm{Var}(x_d)
 \end{bmatrix}
 ```
 
-The diagonal elements represent variances:
+The diagonal elements represent the variance of each variable:
 
 ```math
-C_{ii} = \operatorname{Var}(x_i)
+C_{ii}
+=
+\mathrm{Var}(x_i)
 ```
 
-while the off-diagonal elements represent relationships between different variables.
+The off-diagonal elements represent the covariance between different variables:
+
+```math
+C_{ij}
+=
+\mathrm{Cov}(x_i,x_j),
+\qquad i \neq j
+```
+
+## Interpretation
+
+If
+
+```math
+C_{ij} > 0
+```
+
+then $x_i$ and $x_j$ tend to increase or decrease together.
+
+If
+
+```math
+C_{ij} < 0
+```
+
+then one tends to increase when the other decreases.
+
+If
+
+```math
+C_{ij} \approx 0
+```
+
+then there is little linear relationship between the two variables.
 
 ## Key Properties
 
 - A covariance matrix is symmetric.
-- Its diagonal entries are variances.
-- It is positive semi-definite.
+- Diagonal elements represent variances.
+- Off-diagonal elements represent covariances.
+- A covariance matrix is positive semi-definite.
 - Its eigenvectors represent principal directions of variation.
 - Its eigenvalues represent the amount of variance along those directions.
 
@@ -417,8 +471,22 @@ Covariance matrices are particularly important for:
 - Second-order optimization
 - Random matrix analysis
 
-In neural network pruning, activation covariance can reveal how neurons vary individually and how their activations are correlated with one another.
+For neural network activations, each variable can correspond to the activation of one neuron or channel.
 
+If
+
+```math
+\mathbf{x}
+=
+[x_1,x_2,\ldots,x_d]^T
+```
+
+represents the activations of $d$ neurons, then:
+
+- $C_{ii}$ describes how much neuron $i$ varies.
+- $C_{ij}$ describes how strongly neurons $i$ and $j$ vary together.
+
+This distinction becomes important when moving from variance-based analysis to methods that use the full activation covariance structure.
 ---
 
 # 13. Research Connections
