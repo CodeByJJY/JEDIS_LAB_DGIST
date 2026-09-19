@@ -1,440 +1,304 @@
-# Research 1: Visual AutoRegressive Model
+# Deep Compression
 
-This directory contains notes, papers, and research ideas related to efficient Visual AutoRegressive (VAR) model inference.
+> **Deep Compression: Compressing Deep Neural Networks with Pruning, Trained Quantization and Huffman Coding**
 
-The current research focuses on accelerating VAR inference, especially the computational bottleneck at high-resolution scale steps.
+- **Authors:** Song Han, Huizi Mao, William J. Dally
+- **Venue:** ICLR 2016
+- **Topic:** Neural Network Compression
+- **Keywords:** Pruning, Quantization, Weight Sharing, Huffman Coding
 
 ---
 
-## 1. Research Overview
+## 1. Problem Background
 
-Visual AutoRegressive Modeling (VAR) reformulates conventional autoregressive image generation from **next-token prediction** to **next-scale prediction**.
+Deep neural networks contain a large number of parameters, which leads to:
 
-Instead of generating visual tokens one by one, VAR generates an entire token map at each scale and progressively increases the image resolution.
+- Large model size
+- High memory bandwidth requirements
+- High energy consumption
+- Difficulty deploying models on mobile and embedded systems
+
+A particularly important problem is **memory access cost**.
+
+The paper points out that under 45nm CMOS technology:
+
+| Operation | Energy Cost |
+|---|---:|
+| 32-bit floating-point addition | 0.9 pJ |
+| 32-bit SRAM access | 5 pJ |
+| 32-bit DRAM access | 640 pJ |
+
+Therefore, reducing model size can also reduce expensive off-chip DRAM accesses.
+
+---
+
+## 2. Main Idea
+
+Deep Compression proposes a three-stage compression pipeline:
 
 ```text
-Conventional AR
-
-Token 1
-  ↓
-Token 2
-  ↓
-Token 3
-  ↓
-...
-  ↓
-Token N
+Original Network
+      │
+      ▼
+1. Pruning
+      │
+      ▼
+2. Trained Quantization
+   + Weight Sharing
+      │
+      ▼
+3. Huffman Coding
+      │
+      ▼
+Compressed Network
 ```
+
+Each stage removes a different type of redundancy.
+
+| Stage | Purpose |
+|---|---|
+| Pruning | Reduce the number of connections |
+| Quantization | Reduce the number of bits required per weight |
+| Huffman Coding | Losslessly compress weights and sparse indices |
+
+---
+
+## 3. Network Pruning
+
+### Idea
+
+Remove connections whose weights have small magnitudes.
 
 ```text
-Visual AutoRegressive Modeling
-
-Coarse Scale
-    ↓
-Higher Resolution
-    ↓
-Higher Resolution
-    ↓
-...
-    ↓
-Fine Scale
+Train Network
+     ↓
+Prune Small Weights
+     ↓
+Retrain Remaining Weights
 ```
 
-Within each scale, multiple visual tokens can be generated in parallel.
+After pruning, the dense weight matrix becomes sparse.
 
-This significantly reduces the number of sequential decoding steps compared with conventional autoregressive image generation.
+The sparse weights are stored using formats such as:
 
----
+- CSR (Compressed Sparse Row)
+- CSC (Compressed Sparse Column)
 
-## 2. Why Visual AutoRegressive Modeling?
+The paper also stores **relative indices** instead of absolute indices to reduce storage overhead.
 
-Conventional visual autoregressive models suffer from several limitations:
+### Result
 
-- Slow token-by-token generation
-- Loss of spatial structure caused by raster-order generation
-- Limited scalability toward high-resolution image generation
-- Lower generation quality compared with diffusion models
-
-VAR addresses these problems through **coarse-to-fine next-scale prediction**.
-
-The original VAR model demonstrated that GPT-style autoregressive models can achieve image generation quality competitive with or better than diffusion transformers while requiring substantially fewer sequential generation steps.
+- AlexNet: about **9× fewer parameters**
+- VGG-16: about **13× fewer parameters**
 
 ---
 
-## 3. VAR Inference
+## 4. Trained Quantization and Weight Sharing
 
-VAR represents an image using multiple token maps of progressively increasing resolution.
+### Idea
+
+Instead of storing every remaining weight independently, similar weights share the same value.
+
+The paper uses **k-means clustering** for each layer.
 
 ```text
-Scale 1
-  ↓
-Scale 2
-  ↓
-Scale 3
-  ↓
-...
-  ↓
-Scale K
-  ↓
-Decoder
-  ↓
-Image
+Original Weights
+      ↓
+K-means Clustering
+      ↓
+Shared Weight Centroids
+      ↓
+Store Centroid Index for Each Weight
 ```
 
-The early scales mainly establish the global structure of the image, while later scales refine local textures and details.
-
-A key characteristic of VAR inference is therefore:
+For example:
 
 ```text
-Early scales
-Small token maps
-Low computation cost
-
-        ↓
-
-Later scales
-Large token maps
-High computation cost
-High KV-cache cost
+Many FP32 weights
+      ↓
+32 shared weights
+      ↓
+5-bit index per weight
 ```
+
+For AlexNet:
+
+- CONV layers: 256 shared weights → **8-bit indices**
+- FC layers: 32 shared weights → **5-bit indices**
+
+The shared centroids are then retrained to recover accuracy.
 
 ---
 
-## 4. Remaining Bottlenecks
+## 5. Huffman Coding
 
-Although VAR requires fewer sequential steps than conventional autoregressive models and diffusion models, its inference cost is still highly unbalanced across scales.
+Huffman coding is applied after pruning and quantization.
 
-### Computation Bottleneck
+It assigns:
 
-Later scale steps contain substantially more tokens than early scale steps.
+- Short codes to frequently occurring values
+- Long codes to less frequent values
 
-As the resolution increases:
+The paper applies Huffman coding to:
 
-- Attention cost increases rapidly
-- FFN computation increases
-- GPU execution time becomes concentrated in the last few scales
+- Quantized weights
+- Sparse matrix indices
 
-### Memory Bottleneck
+This provides an additional **20–30% storage reduction**.
 
-VAR inference also keeps K/V states from previous scales.
+---
 
-As more tokens are introduced at higher resolutions:
-
-- KV-cache size increases
-- Memory traffic increases
-- High-resolution generation becomes difficult
-- Large batch inference becomes increasingly memory intensive
-
-Therefore, efficient VAR inference requires optimization of both:
+## 6. Overall Compression Pipeline
 
 ```text
-Computation
-+
-Memory
+Original Network
+      │
+      │ Pruning
+      ▼
+9×–13× Reduction
+      │
+      │ Quantization
+      ▼
+27×–31× Reduction
+      │
+      │ Huffman Coding
+      ▼
+35×–49× Reduction
 ```
 
----
-
-# 5. Key Papers
-
-## 00. Visual Autoregressive Modeling
-
-**Visual Autoregressive Modeling: Scalable Image Generation via Next-Scale Prediction**
-
-- Introduces the Visual AutoRegressive modeling paradigm.
-- Replaces next-token prediction with coarse-to-fine next-scale prediction.
-- Establishes the basic architecture and inference mechanism of VAR.
-
-Paper:
-https://arxiv.org/abs/2404.02905
-
-Notes:
+The important observation is that **pruning and quantization work well together**.
 
 ---
 
-## 01. Infinity
+## 7. Experimental Results
 
-**Infinity: Scaling Bitwise AutoRegressive Modeling for High-Resolution Image Synthesis**
+### Compression Results
 
-- Extends VAR toward high-resolution text-to-image generation.
-- Replaces index-wise token prediction with bitwise prediction.
-- Introduces a massive effective vocabulary and improves reconstruction quality.
+| Model | Original Size | Compressed Size | Compression Ratio |
+|---|---:|---:|---:|
+| LeNet-300-100 | 1070 KB | 27 KB | 40× |
+| LeNet-5 | 1720 KB | 44 KB | 39× |
+| AlexNet | 240 MB | 6.9 MB | 35× |
+| VGG-16 | 552 MB | 11.3 MB | 49× |
 
-Paper:
-https://arxiv.org/abs/2412.04431
+The paper reports no meaningful accuracy degradation after compression.
 
-Notes:
+### AlexNet
 
----
+| Model | Top-1 Error | Top-5 Error |
+|---|---:|---:|
+| Original | 42.78% | 19.73% |
+| Compressed | 42.78% | 19.70% |
 
-## 02. FastVAR
+### VGG-16
 
-**FastVAR: Linear Visual Autoregressive Modeling via Cached Token Pruning**
-
-- Analyzes the computation bottleneck of later VAR scales.
-- Prunes less important tokens at large-scale steps.
-- Restores removed tokens using cached information from previous scales.
-
-Paper:
-https://arxiv.org/abs/2503.23367
-
-Notes:
-
----
-
-## 03. ScaleKV
-
-**Memory-Efficient Visual Autoregressive Modeling with Scale-Aware KV Cache Compression**
-
-- Analyzes the KV-cache memory bottleneck of VAR.
-- Identifies different attention behaviors across layers and scales.
-- Allocates KV-cache budgets adaptively using scale-aware cache compression.
-
-Paper:
-https://arxiv.org/abs/2505.19602
-
-Notes:
+| Model | Top-1 Error | Top-5 Error |
+|---|---:|---:|
+| Original | 31.50% | 11.32% |
+| Compressed | 31.17% | 10.91% |
 
 ---
 
-# 6. Research Direction 1: Multi-Sample VAR Pipelining
+## 8. Speedup and Energy Efficiency
 
-## Motivation
+The paper benchmarks the **pruned sparse network** with batch size = 1.
 
-VAR inference has strongly imbalanced computation across scale steps.
+### Average Speedup
+
+| Hardware | Speedup |
+|---|---:|
+| CPU | 3× |
+| GPU | 3.5× |
+| Mobile GPU | 4.2× |
+
+### Energy Efficiency Improvement
+
+| Hardware | Improvement |
+|---|---:|
+| CPU | 7× |
+| GPU | 3.3× |
+| Mobile GPU | 4.2× |
+
+An important point is that these runtime measurements correspond mainly to the **pruned sparse layers**, not the entire pruning + quantization + Huffman pipeline.
+
+---
+
+## 9. Important Observations
+
+### Pruning + Quantization
+
+Pruning and quantization are more effective when used together than independently.
 
 ```text
-Early scales  → relatively cheap
-Later scales  → increasingly expensive
+Pruning
+   +
+Quantization
+   ↓
+Higher Compression
+with Little Accuracy Loss
 ```
 
-If multiple images are generated independently, executing each image sequentially may leave opportunities for better GPU utilization.
+### CONV vs. FC Layers
 
-The current idea is to reorganize multi-sample inference into a pipeline.
+CONV layers are more sensitive to aggressive quantization than FC layers.
+
+- CONV layers require relatively higher precision.
+- FC layers tolerate lower precision better.
+
+### Memory Matters
+
+For batch size = 1, inference is dominated more strongly by memory access.
+
+Reducing model size can therefore improve:
+
+- Memory bandwidth requirements
+- Cache utilization
+- Energy efficiency
+- Inference latency
 
 ---
 
-## Naive Pipeline Idea
+## 10. Limitations
 
-Group scale steps with similar computational costs into pipeline stages.
+The full compressed representation was difficult to execute efficiently using standard CPU/GPU libraries at the time.
 
-Example:
+In particular:
 
-```text
-Stage 1 : Scale 0 - 5
-Stage 2 : Scale 6 - 7
-Stage 3 : Scale 8 - 9
-Stage 4 : Scale 10
-Stage 5 : Scale 11
-Stage 6 : Scale 12
-```
+- Sparse computation requires efficient sparse kernels.
+- Weight sharing requires indirect codebook lookup.
+- Existing libraries did not efficiently support the complete compressed representation.
 
-Multiple image generations can then overlap across stages.
+The paper therefore suggests:
 
-```text
-Time ------------------------------------------------------>
-
-Stage 1   Img A   Img B   Img C   Img D   Img E   Img F
-
-Stage 2           Img A   Img B   Img C   Img D   Img E
-
-Stage 3                   Img A   Img B   Img C   Img D
-
-Stage 4                           Img A   Img B   Img C
-
-Stage 5                                   Img A   Img B
-
-Stage 6                                           Img A
-```
-
-The goal is to improve **batch inference throughput** by exploiting the asymmetric execution cost across VAR scales.
+- Custom GPU kernels
+- Specialized hardware accelerators
 
 ---
 
-## Research Questions
+## 11. Key Takeaways
 
-Important questions include:
-
-- How should VAR scales be grouped into pipeline stages?
-- How should stage boundaries be determined?
-- Can multiple samples actually execute concurrently on the GPU?
-- How much GPU utilization is currently lost during single-sample inference?
-- How should intermediate activations and KV caches be managed?
-- What is the throughput gain as batch size increases?
-- What additional memory overhead does pipelining introduce?
-- How does pipelining affect end-to-end latency?
-- What is the optimal trade-off between latency, throughput, and memory usage?
+1. Neural networks contain substantial parameter redundancy.
+2. Pruning reduces the number of weights.
+3. Quantization reduces the number of bits required per weight.
+4. Huffman coding removes additional encoding redundancy.
+5. Combining the three methods achieves **35×–49× model compression** without accuracy loss.
+6. Reducing model size can also reduce expensive DRAM accesses.
+7. Compression ratio and actual inference speedup are not necessarily the same.
+8. Hardware and software support determine whether compression translates into real acceleration.
 
 ---
 
-## Evaluation Metrics
+## 12. Keywords to Review
 
-### Performance
-
-- End-to-end latency
-- Throughput
-- Images / second
-- GPU utilization
-- SM utilization
-- Memory bandwidth utilization
-
-### Memory
-
-- Peak GPU memory
-- KV-cache memory
-- Intermediate activation memory
-
-### Generation Quality
-
-- FID
-- GenEval
-- DPG
-- CLIP Score
-
----
-
-# 7. Research Direction 2: KV Cache Channel Compression
-
-Existing VAR KV-cache compression methods mainly reduce the cache along the **token dimension**.
-
-```text
-Full KV Cache
-
-Tokens × Channels
-```
-
-Previous direction:
-
-```text
-Reduce Tokens
-    ↓
-Keep fewer historical K/V states
-```
-
-Possible alternative direction:
-
-```text
-Reduce Channels
-    ↓
-Keep fewer K/V feature dimensions
-```
-
-Questions to investigate:
-
-- Are all KV channels equally important?
-- Are important channels consistent across scales?
-- Are important channels consistent across transformer layers?
-- Can activation statistics identify redundant KV dimensions?
-- Can channel pruning reduce memory bandwidth as well as memory capacity?
-- How much reconstruction or generation quality is lost after channel reduction?
-
----
-
-# 8. Related Efficiency Techniques
-
-Relevant optimization directions include:
-
-- Token pruning
-- Token merging
-- KV-cache compression
-- KV-cache eviction
+- Network Pruning
+- Sparse Matrix
+- CSR / CSC
 - Quantization
-- Parallel decoding
-- Pipelining
-- Batch inference
-- FlashAttention
-- Kernel fusion
-
----
-
-# 9. Research Materials
-
-## Internal Materials
-
-### VAR Literature Review
-
-`Meeting_20260626_VARliteraturereview.pdf`
-
-Topics:
-
-- Conventional visual autoregressive modeling
-- VQ-based visual tokenization
-- Parallel autoregressive generation
-- VAR
-- Infinity
-- Efficient visual generation
-
-### VAR Overview
-
-`Meeting_20260824_VAROverview.pdf`
-
-Topics:
-
-- VAR inference mechanism
-- Scale-wise computation characteristics
-- VAR inference bottlenecks
-- FastVAR
-- ScaleKV
-- Multi-sample VAR pipelining
-- KV-cache channel pruning
-
----
-
-# 10. Study Plan
-
-## Phase 1. Understand VAR
-
-- [ ] Autoregressive modeling
-- [ ] Visual tokenization
-- [ ] VQVAE / VQGAN
-- [ ] Next-token prediction
-- [ ] Next-scale prediction
-- [ ] VAR inference mechanism
-- [ ] KV cache in VAR
-
-## Phase 2. Read Core Papers
-
-- [ ] Visual Autoregressive Modeling
-- [ ] Infinity
-- [ ] FastVAR
-- [ ] ScaleKV
-
-## Phase 3. Profile VAR Inference
-
-- [ ] Reproduce baseline inference
-- [ ] Measure per-scale latency
-- [ ] Measure per-scale token count
-- [ ] Measure GPU utilization
-- [ ] Measure KV-cache memory
-- [ ] Identify late-scale bottlenecks
-
-## Phase 4. Multi-Sample Pipeline
-
-- [ ] Define pipeline stages
-- [ ] Implement baseline multi-sample execution
-- [ ] Implement pipelined execution
-- [ ] Measure latency
-- [ ] Measure throughput
-- [ ] Measure GPU utilization
-- [ ] Measure memory overhead
-
-## Phase 5. Optimization
-
-- [ ] Optimize stage partitioning
-- [ ] Explore asynchronous execution
-- [ ] Explore CUDA stream scheduling
-- [ ] Compare against normal batching
-- [ ] Evaluate quality / performance trade-offs
-
----
-
-# Research Goal
-
-The ultimate goal is to understand the remaining system bottlenecks of Visual AutoRegressive models and develop efficient inference techniques that improve:
-
-- Throughput
-- GPU utilization
-- Memory efficiency
-- High-resolution scalability
-
-while preserving generation quality.
+- Weight Sharing
+- K-means Clustering
+- Codebook
+- Huffman Coding
+- SRAM / DRAM
+- Memory Bandwidth
+- Matrix-Vector Multiplication
+- Sparse Computation
