@@ -119,16 +119,16 @@ Orthogonality allows vectors to be represented independently from one another.
 
 Definition:
 
-For a matrix \(A\),
+For a matrix $A$,
 
-\[
+$$
 A\mathbf{v} = \lambda \mathbf{v}
-\]
+$$
 
 where
 
-- \(\mathbf{v}\) is an eigenvector
-- \(\lambda\) is the corresponding eigenvalue
+- $\mathbf{v}$ is an eigenvector
+- $\lambda$ is the corresponding eigenvalue
 
 Topics:
 
@@ -152,13 +152,13 @@ Topics:
 - Eigen-decomposition
 - Diagonalizable matrices
 
-If a matrix \(A\) is diagonalizable,
+If a matrix $A$ is diagonalizable,
 
-\[
+$$
 A = P D P^{-1}
-\]
+$$
 
-where \(D\) contains eigenvalues.
+where $D$ contains eigenvalues.
 
 Key idea:
 
@@ -168,17 +168,17 @@ Diagonalization simplifies repeated matrix operations and reveals the structure 
 
 # 8. Singular Value Decomposition
 
-For a matrix \(A\),
+For a matrix $A$,
 
-\[
+$$
 A = U \Sigma V^T
-\]
+$$
 
 where
 
-- \(U\): left singular vectors
-- \(\Sigma\): singular values
-- \(V\): right singular vectors
+- $U$: left singular vectors
+- $\Sigma$: singular values
+- $V$: right singular vectors
 
 Topics:
 
@@ -198,13 +198,13 @@ Research relevance:
 
 # 9. Positive Definite Matrices
 
-A symmetric matrix \(A\) is positive definite if
+A symmetric matrix $A$ is positive definite if
 
-\[
+$$
 \mathbf{x}^T A \mathbf{x} > 0
-\]
+$$
 
-for every non-zero vector \(\mathbf{x}\).
+for every non-zero vector $\mathbf{x}$.
 
 Topics:
 
@@ -226,9 +226,9 @@ Research relevance:
 
 General form:
 
-\[
+$$
 \mathbf{x}^T A \mathbf{x}
-\]
+$$
 
 Topics:
 
@@ -240,15 +240,16 @@ Research relevance:
 
 Second-order approximation of neural network loss often takes the form
 
-\[
-\Delta L \approx
+$$
+\Delta L
+\approx
 \frac{1}{2}
 \Delta \mathbf{w}^T
 H
 \Delta \mathbf{w}
-\]
+$$
 
-where \(H\) is the Hessian matrix.
+where $H$ is the Hessian matrix.
 
 This formulation appears in methods such as:
 
@@ -269,17 +270,17 @@ Topics:
 
 Examples:
 
-\[
+$$
 \|\mathbf{x}\|_2
 =
 \sqrt{\sum_i x_i^2}
-\]
+$$
 
-\[
+$$
 \|A\|_F
 =
 \sqrt{\sum_{i,j} A_{ij}^2}
-\]
+$$
 
 Research relevance:
 
@@ -292,25 +293,25 @@ Research relevance:
 
 # 12. Covariance Matrix
 
-For a random vector \(\mathbf{x}\),
+For a random vector $\mathbf{x}$,
 
-\[
+$$
 C
 =
 \mathbb{E}
-[
+\left[
 (\mathbf{x}-\boldsymbol{\mu})
 (\mathbf{x}-\boldsymbol{\mu})^T
-]
-\]
+\right]
+$$
 
 where
 
-\[
+$$
 \boldsymbol{\mu}
 =
 \mathbb{E}[\mathbf{x}]
-\]
+$$
 
 Topics:
 
@@ -328,6 +329,68 @@ Research relevance:
 - PCA
 - Random matrix analysis
 
+---
+
+# 13. Research Connections
+
+## Quantization
+
+Important concepts:
+
+- Vector norms
+- Matrix multiplication
+- Projection
+- Reconstruction error
+
+---
+
+## Optimal Brain Compression / GPTQ
+
+Important concepts:
+
+- Hessian matrix
+- Matrix inverse
+- Positive definite matrices
+- Quadratic forms
+- Second-order approximation
+
+---
+
+## Variance-Based Pruning
+
+Important concepts:
+
+- Mean
+- Variance
+- Covariance
+- Covariance matrix
+
+---
+
+## QuaRot / SpinQuant
+
+Important concepts:
+
+- Orthogonal matrices
+- Rotation matrices
+- Hadamard matrices
+- Invariance under orthogonal transformations
+
+---
+
+## Low-Rank Compression
+
+Important concepts:
+
+- Singular Value Decomposition
+- Rank
+- Low-rank approximation
+
+---
+
+# Study Goal
+
+The goal is to understand these concepts both mathematically and in the context of modern neural network compression and efficient inference.
 ---
 
 # 13. Research Connections
